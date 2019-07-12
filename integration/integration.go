@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudtrust/keycloak-client"
 	"github.com/spf13/pflag"
+	"github.com/tozny/keycloak-client"
 )
 
 const (
