@@ -3,6 +3,7 @@ package keycloak
 import (
 	"fmt"
 
+	"gopkg.in/h2non/gentleman.v2/plugins/body"
 	"gopkg.in/h2non/gentleman.v2/plugins/url"
 )
 
@@ -31,6 +32,11 @@ func (c *Client) GetClient(accessToken string, realmName, idClient string) (Clie
 	var resp = ClientRepresentation{}
 	var err = c.get(accessToken, &resp, url.Path(clientIDPath), url.Param("realm", realmName), url.Param("id", idClient))
 	return resp, err
+}
+
+// UpdateClient updates the client.
+func (c *Client) UpdateClient(accessToken string, realmName, clientID string, client ClientRepresentation) error {
+	return c.put(accessToken, url.Path(clientIDPath), url.Param("realm", realmName), url.Param("id", clientID), body.JSON(client))
 }
 
 // GetSecret get the client secret. idClient is the id of client (not client-id).

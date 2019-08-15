@@ -115,9 +115,6 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 		}
 	}
 
-	fmt.Printf("%s", accessToken.(string))
-	fmt.Println()
-
 	return accessToken.(string), nil
 }
 
