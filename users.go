@@ -27,8 +27,8 @@ const (
 // Parameters: email, first (paging offset, int), firstName, lastName, username,
 // max (maximum result size, default = 100),
 // search (string contained in username, firstname, lastname or email)
-func (c *Client) GetUsers(accessToken string, reqRealmName, targetRealmName string, paramKV ...string) (UsersPageRepresentation, error) {
-	var resp UsersPageRepresentation
+func (c *Client) GetUsers(accessToken string, reqRealmName, targetRealmName string, paramKV ...string) (Users, error) {
+	var resp Users
 	if len(paramKV)%2 != 0 {
 		return resp, fmt.Errorf("the number of key/val parameters should be even")
 	}
