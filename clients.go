@@ -10,7 +10,7 @@ import (
 const (
 	clientsPath  = "/auth/admin/realms/:realm/clients"
 	clientIDPath = clientsPath + "/:id"
-	clientSecret = clientsPath + "/client-secret"
+	clientSecret = clientIDPath + "/client-secret"
 )
 
 // GetClients returns a list of clients belonging to the realm.
@@ -32,6 +32,11 @@ func (c *Client) GetClient(accessToken string, realmName, idClient string) (Clie
 	var resp = ClientRepresentation{}
 	var err = c.get(accessToken, &resp, url.Path(clientIDPath), url.Param("realm", realmName), url.Param("id", idClient))
 	return resp, err
+}
+
+// CreateClient creates a client
+func (c *Client) CreateClient(accessToken string, realmName string, client ClientCreateRequest) (string, error) {
+	return c.post(accessToken, nil, url.Path(clientsPath), url.Param("realm", realmName), body.JSON(client))
 }
 
 // UpdateClient updates the client.

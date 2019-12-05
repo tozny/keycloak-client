@@ -76,9 +76,8 @@ func (c *Client) RaiseExecutionPriority(accessToken string, realmName, execution
 }
 
 // CreateAuthenticationFlow creates a new authentication flow.
-func (c *Client) CreateAuthenticationFlow(accessToken string, realmName string, authFlow AuthenticationFlowRepresentation) error {
-	_, err := c.post(accessToken, nil, url.Path(authenticationManagementPath+"/flows"), url.Param("realm", realmName), body.JSON(authFlow))
-	return err
+func (c *Client) CreateAuthenticationFlow(accessToken string, realmName string, authFlow AuthenticationFlowRepresentation) (string, error) {
+	return c.post(accessToken, nil, url.Path(authenticationManagementPath+"/flows"), url.Param("realm", realmName), body.JSON(authFlow))
 }
 
 // GetAuthenticationFlows returns a list of authentication flows.
@@ -98,8 +97,8 @@ func (c *Client) CopyExistingAuthenticationFlow(accessToken string, realmName, f
 }
 
 // GetAuthenticationExecutionForFlow returns the authentication executions for a flow.
-func (c *Client) GetAuthenticationExecutionForFlow(accessToken string, realmName, flowAlias string) (AuthenticationExecutionInfoRepresentation, error) {
-	var resp = AuthenticationExecutionInfoRepresentation{}
+func (c *Client) GetAuthenticationExecutionForFlow(accessToken string, realmName, flowAlias string) ([]AuthenticationExecutionInfoRepresentation, error) {
+	var resp = []AuthenticationExecutionInfoRepresentation{}
 	var err = c.get(accessToken, &resp, url.Path(authenticationManagementPath+"/flows/:flowAlias/executions"), url.Param("realm", realmName), url.Param("flowAlias", flowAlias))
 	return resp, err
 }

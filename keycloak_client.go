@@ -230,7 +230,6 @@ func (c *Client) post(accessToken string, data interface{}, plugins ...plugin.Pl
 			}
 		case resp.StatusCode >= 200:
 			var location = resp.Header.Get("Location")
-
 			switch resp.Header.Get("Content-Type") {
 			case "application/json":
 				return location, resp.JSON(data)
