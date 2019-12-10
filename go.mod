@@ -1,15 +1,10 @@
 module github.com/tozny/keycloak-client
 
-go 1.12
-
-replace github.com/gbrlsnchs/jwt => github.com/gbrlsnchs/jwt/v2 v2.0.0
-
-exclude github.com/gbrlsnchs/jwt/v2 v2.0.0-00010101000000-000000000000
+go 1.13
 
 require (
 	github.com/coreos/go-oidc v2.0.0+incompatible
-	github.com/gbrlsnchs/jwt v0.0.0-00010101000000-000000000000
-	github.com/gbrlsnchs/jwt/v2 v2.0.0-alpha.0 // indirect
+	github.com/gbrlsnchs/jwt/v2 v2.0.0
 	github.com/nbio/st v0.0.0-20140626010706-e9e8d9816f32 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect

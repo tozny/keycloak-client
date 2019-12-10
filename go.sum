@@ -3,8 +3,6 @@ github.com/coreos/go-oidc v2.0.0+incompatible h1:+RStIopZ8wooMx+Vs5Bt8zMXxV1ABl5
 github.com/coreos/go-oidc v2.0.0+incompatible/go.mod h1:CgnwVTmzoESiwO9qyAFEMiHoZ1nMCKZlZ9V6mm3/LKc=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/gbrlsnchs/jwt/v2 v2.0.0-alpha.0 h1:ecphKvicTRX1jW8ZH8NJHoJa9JT/VRdZGUOnZLcJVBA=
-github.com/gbrlsnchs/jwt/v2 v2.0.0-alpha.0/go.mod h1:7kIj4oeJPffUpLL8RnU5Y3xT1Sm/VuFqjv8T1tqhqc8=
 github.com/gbrlsnchs/jwt/v2 v2.0.0 h1:4iEVJykJPXrCimVaQJAfBWKAvuzDJi5fDdUBdrdTZ3M=
 github.com/gbrlsnchs/jwt/v2 v2.0.0/go.mod h1:7kIj4oeJPffUpLL8RnU5Y3xT1Sm/VuFqjv8T1tqhqc8=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=

@@ -15,7 +15,7 @@ import (
 	"gopkg.in/h2non/gentleman.v2/plugins/query"
 	"gopkg.in/h2non/gentleman.v2/plugins/timeout"
 
-	jwt "github.com/gbrlsnchs/jwt"
+	jwt "github.com/gbrlsnchs/jwt/v2"
 )
 
 // Config is the keycloak client http config.
