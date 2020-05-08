@@ -489,6 +489,7 @@ type RequiredActionProviderRepresentation struct {
 	Enabled       *bool                   `json:"enabled,omitempty"`
 	Name          *string                 `json:"name,omitempty"`
 	ProviderId    *string                 `json:"providerId,omitempty"`
+	Priority      *int                    `json:"priority,omitempty"`
 }
 
 type ResourceOwnerRepresentation struct {
