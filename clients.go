@@ -50,3 +50,8 @@ func (c *Client) GetSecret(accessToken string, realmName, idClient string) (Cred
 	var err = c.get(accessToken, &resp, url.Path(clientSecret), url.Param("realm", realmName), url.Param("id", idClient))
 	return resp, err
 }
+
+// DeleteClient deletes specified client from the realm. id is the id of client (not client-id).
+func (c *Client) DeleteClient(accessToken string, realmName, id string) error {
+	return c.delete(accessToken, url.Path(clientIDPath), url.Param("realm", realmName), url.Param("id", id))
+}
