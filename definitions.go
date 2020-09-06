@@ -475,8 +475,6 @@ type RealmRepresentation struct {
 	SsoSessionIdleTimeout               *int32                                  `json:"ssoSessionIdleTimeout,omitempty"`
 	SsoSessionMaxLifespan               *int32                                  `json:"ssoSessionMaxLifespan,omitempty"`
 	SupportedLocales                    *[]string                               `json:"supportedLocales,omitempty"`
-	UserFederationMappers               *[]UserFederationMapperRepresentation   `json:"userFederationMappers,omitempty"`
-	UserFederationProviders             *[]UserFederationProviderRepresentation `json:"userFederationProviders,omitempty"`
 	Users                               *[]UserRepresentation                   `json:"users,omitempty"`
 	VerifyEmail                         *bool                                   `json:"verifyEmail,omitempty"`
 	WaitIncrementSeconds                *int32                                  `json:"waitIncrementSeconds,omitempty"`
@@ -617,24 +615,21 @@ type UserConsentRepresentation struct {
 	LastUpdatedDate        *int64                  `json:"lastUpdatedDate,omitempty"`
 }
 
-type UserFederationMapperRepresentation struct {
-	Config                        *map[string]interface{} `json:"config,omitempty"`
-	FederationMapperType          *string                 `json:"federationMapperType,omitempty"`
-	FederationProviderDisplayName *string                 `json:"federationProviderDisplayName,omitempty"`
-	Id                            *string                 `json:"id,omitempty"`
-	Name                          *string                 `json:"name,omitempty"`
+type UserFederationProviderRepresentation struct {
+	Id          *string `json:"id,omitempty"`
+	DisplayName *string `json:"name,omitempty"`
+	// The id of the resource the provider is attached to
+	// will be realm id for a user federation provider or
+	// provider id for a user federation provider mapper
+	ParentId *string `json:"parentId,omitempty"`
+	// User viewable type of the provider
+	ProviderId *string `json:"providerId,omitempty"`
+	// Keycloak defined type corresponding to the ProviderId
+	ProviderType *string              `json:"providerType,omitempty"`
+	Config       *map[string][]string `json:"config,omitempty"`
 }
 
-type UserFederationProviderRepresentation struct {
-	ChangedSyncPeriod *int32                  `json:"changedSyncPeriod,omitempty"`
-	Config            *map[string]interface{} `json:"config,omitempty"`
-	DisplayName       *string                 `json:"displayName,omitempty"`
-	FullSyncPeriod    *int32                  `json:"fullSyncPeriod,omitempty"`
-	Id                *string                 `json:"id,omitempty"`
-	LastSync          *int32                  `json:"lastSync,omitempty"`
-	Priority          *int32                  `json:"priority,omitempty"`
-	ProviderName      *string                 `json:"providerName,omitempty"`
-}
+type UserFederationProviderMapperRepresentation = UserFederationProviderRepresentation
 
 type UserRepresentation struct {
 	Access                     *map[string]bool                   `json:"access,omitempty"`
