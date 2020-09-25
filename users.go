@@ -61,9 +61,9 @@ func (c *Client) GetUser(accessToken string, realmName, userID string) (UserRepr
 }
 
 // GetUserDetails gets a detailed represention of the user with resolved groups and roles.
-func (c *Client) GetUserDetails(accessToken string, realmName, userID string) (UserDetailsRepresentation, error) {
+func (c *Client) GetUserDetails(accessToken string, realmName, username string) (UserDetailsRepresentation, error) {
 	var resp = UserDetailsRepresentation{}
-	var err = c.get(accessToken, &resp, url.Path(userDetailsPath), url.Param("realm", realmName), url.Param("id", userID))
+	var err = c.get(accessToken, &resp, url.Path(userDetailsPath), url.Param("realm", realmName), url.Param("username", username))
 	return resp, err
 }
 
