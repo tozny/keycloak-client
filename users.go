@@ -9,6 +9,8 @@ import (
 
 const (
 	userPath                     = "/auth/admin/realms/:realm/users"
+	userExensionPath             = "/auth/realms/:realm/admin/users"
+	userDetailsPath              = userExensionPath + "/:username"
 	userCountPath                = userPath + "/count"
 	userIDPath                   = userPath + "/:id"
 	userGroupsPath               = userIDPath + "/groups"
@@ -55,6 +57,13 @@ func (c *Client) CountUsers(accessToken string, realmName string) (int, error) {
 func (c *Client) GetUser(accessToken string, realmName, userID string) (UserRepresentation, error) {
 	var resp = UserRepresentation{}
 	var err = c.get(accessToken, &resp, url.Path(userIDPath), url.Param("realm", realmName), url.Param("id", userID))
+	return resp, err
+}
+
+// GetUserDetails gets a detailed represention of the user with resolved groups and roles.
+func (c *Client) GetUserDetails(accessToken string, realmName, userID string) (UserDetailsRepresentation, error) {
+	var resp = UserDetailsRepresentation{}
+	var err = c.get(accessToken, &resp, url.Path(userDetailsPath), url.Param("realm", realmName), url.Param("id", userID))
 	return resp, err
 }
 
