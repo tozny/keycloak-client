@@ -26,7 +26,7 @@ func (c *Client) CreateClientRole(accessToken string, realmName string, clientID
 
 // DeleteRole deletes a role
 func (c *Client) DeleteRole(accessToken string, realmName string, clientID string, roleID string) error {
-	return c.delete(accessToken, nil, url.Path(clientRolePath), url.Param("realm", realmName), url.Param("id", clientID), url.Param("role_id", roleID))
+	return c.delete(accessToken, url.Path(clientRolePath), url.Param("realm", realmName), url.Param("id", clientID), url.Param("role_id", roleID))
 }
 
 // GetRoles gets all roles for the realm or client
