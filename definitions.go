@@ -659,6 +659,19 @@ type UserRepresentation struct {
 
 type Users []UserRepresentation
 
+type UserDetailsRepresentation struct {
+	ID             *string                 `json:"id,omitempty"`
+	Username       *string                 `json:"username,omitempty"`
+	FirstName      *string                 `json:"firstName,omitempty"`
+	LastName       *string                 `json:"lastName,omitempty"`
+	Email          *string                 `json:"email,omitempty"`
+	Enabled        *bool                   `json:"enabled,omitempty"`
+	FederationLink *string                 `json:"federationLink,omitempty"`
+	Roles          *MappingsRepresentation `json:"roles,omitempty"`
+	Groups         *[]GroupRepresentation  `json:"groups,omitempty"`
+	Attributes     *map[string][]string    `json:"attributes,omitempty"`
+}
+
 type UserSessionRepresentation struct {
 	Clients    *map[string]interface{} `json:"clients,omitempty"`
 	Id         *string                 `json:"id,omitempty"`
