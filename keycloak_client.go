@@ -1,6 +1,7 @@
 package keycloak
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -291,6 +292,78 @@ func (c *Client) delete(accessToken string, plugins ...plugin.Plugin) error {
 			}
 		}
 	}
+}
+
+// createVanillaRequest isolates duplicate code in creating http requests.
+func createVanillaRequest(method string, path string, params interface{}) (*http.Request, error) {
+	var buf bytes.Buffer
+	var request *http.Request
+	err := json.NewEncoder(&buf).Encode(&params)
+	if err != nil {
+		return request, err
+	}
+	request, err = http.NewRequest(method, path, &buf)
+	if err != nil {
+		return request, HTTPError{
+			HTTPStatus: 0,
+			Message:    fmt.Sprintf("createVanillaRequest: error %s: creating request for %s %s %v", err, method, path, params),
+		}
+	}
+	return request, nil
+}
+
+// makeVanillaCall sends a request, auto decoding the response to the result interface if sent.
+func makeVanillaCall(accessToken string, request *http.Request, result interface{}) error {
+	client := &http.Client{}
+
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	request.Header.Set("X-Forwarded-Proto", "https")
+	request.Header.Set("Content-Type", "application/json")
+
+	response, err := client.Do(request)
+	if err != nil {
+		requestURL := request.URL.String()
+		return HTTPError{
+			HTTPStatus: response.StatusCode,
+			Message:    fmt.Sprintf("%s: server http error %d", requestURL, response.StatusCode),
+		}
+	}
+	defer response.Body.Close()
+	if !(response.StatusCode >= 200 && response.StatusCode <= 299) {
+		requestURL := request.URL.String()
+		return HTTPError{
+			HTTPStatus: response.StatusCode,
+			Message:    fmt.Sprintf("%s: server http error %d", requestURL, response.StatusCode),
+		}
+	}
+	// If no result is expected, don't attempt to decode a potentially
+	// empty response stream and avoid incurring EOF errors
+	if result == nil {
+		return nil
+	}
+
+	// var bodyBytes []byte
+	// if response.Body != nil {
+	// 	bodyBytes, err = ioutil.ReadAll(response.Body)
+	// 	if err != nil {
+	// 		fmt.Printf("Error reading request body %s", err)
+	// 	}
+	// }
+
+	// fmt.Printf("Raw Response %s", string(bodyBytes))
+
+	// // Repopulate body with the data read
+	// response.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	err = json.NewDecoder(response.Body).Decode(&result)
+	if err != nil {
+		requestURL := request.URL.String()
+		return HTTPError{
+			HTTPStatus: response.StatusCode,
+			Message:    fmt.Sprintf("%s: server http error %d", requestURL, response.StatusCode),
+		}
+	}
+	return nil
 }
 
 func (c *Client) put(accessToken string, plugins ...plugin.Plugin) error {

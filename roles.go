@@ -6,10 +6,10 @@ import (
 )
 
 const (
-	rolePath       = "/auth/admin/realms/:realm/roles"
-	roleByIDPath   = "/auth/admin/realms/:realm/roles-by-id/:id"
+	rolePath        = "/auth/admin/realms/:realm/roles"
+	roleByIDPath    = "/auth/admin/realms/:realm/roles-by-id/:id"
 	clientRolesPath = "/auth/admin/realms/:realm/clients/:id/roles"
-	clientRolePath = "/auth/admin/realms/:realm/clients/:id/roles/:role_id"
+	clientRolePath  = "/auth/admin/realms/:realm/clients/:id/roles/:role_id"
 )
 
 // GetClientRoles gets all roles for the realm or client
