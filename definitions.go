@@ -685,3 +685,13 @@ type UserSessionRepresentation struct {
 type SmsCodeRepresentation struct {
 	Code *string `json:"code,omitempty"`
 }
+
+// ClientScopeRepresentation wraps keycloak client scope data
+type ClientScopeRepresentation struct {
+	Id              *string                         `json"id,omitempty"`
+	Name            *string                         `json:"name,omitempty"`
+	Description     *string                         `json:"description,omitempty"`
+	Protocol        *string                         `json:"protocol,omitempty"`
+	ProtocolMappers *[]ProtocolMapperRepresentation `json:"protocolMappers,omitempty"`
+	Attributes      *map[string][]string            `json:"attributes,omitempty"`
+}
