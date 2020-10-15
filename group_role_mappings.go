@@ -64,8 +64,12 @@ func (c *Client) AddGroupRealmRoleMappings(accessToken, realmName, groupId strin
 // ]
 // ```
 func (c *Client) RemoveGroupRealmRoleMappings(accessToken, realmName, groupId string, roleMappings []RoleRepresentation) error {
-	err := c.delete(accessToken, nil, url.Path(groupsRealmRoleMappingPath), url.Param("realm", realmName), url.Param("id", groupId), body.JSON(roleMappings))
-	return err
+	path := c.apiURL.String() + "/auth/admin/realms/" + realmName + "/groups/" + groupId + "/role-mappings/realm"
+	request, err := createVanillaRequest("DELETE", path, roleMappings)
+	if err != nil {
+		return err
+	}
+	return makeVanillaCall(accessToken, request, nil)
 }
 
 // GetGroupClientRoleMappings returns the assigned client roles for a group and error (if any).
