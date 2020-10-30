@@ -10,6 +10,7 @@ all: lint build
 # lint target that lints ,compile checks, lints the source code and dependency list
 lint:
 	go vet ./...
+	go fmt ./...
 	go mod tidy
 
 # Target for building a cli binary complied for the current platform

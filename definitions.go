@@ -688,7 +688,7 @@ type SmsCodeRepresentation struct {
 
 // ClientScopeRepresentation wraps keycloak client scope data
 type ClientScopeRepresentation struct {
-	Id              *string                         `json"id,omitempty"`
+	Id              *string                         `json:"id,omitempty"`
 	Name            *string                         `json:"name,omitempty"`
 	Description     *string                         `json:"description,omitempty"`
 	Protocol        *string                         `json:"protocol,omitempty"`
