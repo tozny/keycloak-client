@@ -69,7 +69,7 @@ func (c *Client) RemoveGroupRealmRoleMappings(accessToken, realmName, groupId st
 	if err != nil {
 		return err
 	}
-	return makeVanillaCall(accessToken, request, nil)
+	return makeJSONCall(accessToken, request, nil)
 }
 
 // GetGroupClientRoleMappings returns the assigned client roles for a group and error (if any).
@@ -128,5 +128,5 @@ func (c *Client) RemoveGroupClientRoleMappings(accessToken, realmName, groupId, 
 	if err != nil {
 		return err
 	}
-	return makeVanillaCall(accessToken, request, nil)
+	return makeJSONCall(accessToken, request, nil)
 }

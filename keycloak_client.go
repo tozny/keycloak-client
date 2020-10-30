@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -312,8 +313,8 @@ func createVanillaRequest(method string, path string, params interface{}) (*http
 	return request, nil
 }
 
-// makeVanillaCall sends a request, auto decoding the response to the result interface if sent.
-func makeVanillaCall(accessToken string, request *http.Request, result interface{}) error {
+// makeJSONCall sends a request, auto decoding the response to the result interface if sent.
+func makeJSONCall(accessToken string, request *http.Request, result interface{}) error {
 	client := &http.Client{}
 
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
@@ -364,6 +365,40 @@ func makeVanillaCall(accessToken string, request *http.Request, result interface
 		}
 	}
 	return nil
+}
+
+// makePlainTextCall sends a request, return the plain text response and error (if any).
+func makePlainTextCall(accessToken string, request *http.Request) (string, error) {
+	var body string
+	client := &http.Client{}
+
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	request.Header.Set("X-Forwarded-Proto", "https")
+	request.Header.Set("Content-Type", "text/plain")
+
+	response, err := client.Do(request)
+	if err != nil {
+		requestURL := request.URL.String()
+		return body, HTTPError{
+			HTTPStatus: response.StatusCode,
+			Message:    fmt.Sprintf("%s: server http error %d", requestURL, response.StatusCode),
+		}
+	}
+	defer response.Body.Close()
+	if !(response.StatusCode >= 200 && response.StatusCode <= 299) {
+		requestURL := request.URL.String()
+		return body, HTTPError{
+			HTTPStatus: response.StatusCode,
+			Message:    fmt.Sprintf("%s: server http error %d", requestURL, response.StatusCode),
+		}
+	}
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return body, err
+	}
+
+	body = string(bodyBytes)
+	return body, nil
 }
 
 func (c *Client) put(accessToken string, plugins ...plugin.Plugin) error {
