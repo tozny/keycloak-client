@@ -120,8 +120,7 @@ func New(config Config) (*Client, error) {
 	}, nil
 }
 
-// FetchToken fetches a valid token from keycloak.
-func (c *Client) FetchToken(realm string, username string, password string) (TokenInfo, error) {
+func (c *Client) doTokenRequest(realm, bodyString string) (TokenInfo, error) {
 	var req *gentleman.Request
 	{
 		var authPath = fmt.Sprintf("/auth/realms/%s/protocol/openid-connect/token", realm)
@@ -129,45 +128,7 @@ func (c *Client) FetchToken(realm string, username string, password string) (Tok
 		req = req.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 		req = req.Path(authPath)
 		req = req.Type("urlencoded")
-		req = req.BodyString(fmt.Sprintf("username=%s&password=%s&grant_type=password&client_id=admin-cli", username, password))
-	}
-
-	var resp *gentleman.Response
-	{
-		var err error
-		resp, err = req.Do()
-		if err != nil {
-			return TokenInfo{}, errors.Wrap(err, "could not get token")
-		}
-	}
-	defer resp.Close()
-
-	var tokenResponse tokenJSON
-	{
-		var err error
-		err = resp.JSON(&tokenResponse)
-		if err != nil {
-			return TokenInfo{}, errors.Wrap(err, "could not unmarshal response")
-		}
-	}
-	// For simplicity, just use time.Now with a 3 second back-date
-	// Otherwise this requires parsing headers, the token itself, and requires the
-	// server times are 100% synced. This is less overhead and plenty accurate
-	tokenInfo := tokenResponse.toTokenInfo(time.Now().Add(time.Duration(-3)))
-
-	return tokenInfo, nil
-}
-
-// RefreshToken fetches a valid token from keycloak using the refresh token.
-func (c *Client) RefreshToken(realm string, info TokenInfo) (TokenInfo, error) {
-	var req *gentleman.Request
-	{
-		var authPath = fmt.Sprintf("/auth/realms/%s/protocol/openid-connect/token", realm)
-		req = c.httpClient.Post()
-		req = req.SetHeader("Content-Type", "application/x-www-form-urlencoded")
-		req = req.Path(authPath)
-		req = req.Type("urlencoded")
-		req = req.BodyString(fmt.Sprintf("refresh_token=%s&grant_type=refresh_token&client_id=admin-cli", info.RefreshToken))
+		req = req.BodyString(bodyString)
 	}
 
 	var resp *gentleman.Response
@@ -179,6 +140,7 @@ func (c *Client) RefreshToken(realm string, info TokenInfo) (TokenInfo, error) {
 		}
 	}
 	defer resp.Close()
+	// check the response code to make sure we were successful before parsing
 	if !resp.Ok {
 		var respErr map[string]string
 		err := resp.JSON(&respErr)
@@ -205,10 +167,25 @@ func (c *Client) RefreshToken(realm string, info TokenInfo) (TokenInfo, error) {
 			return TokenInfo{}, errors.Wrap(err, "could not unmarshal response")
 		}
 	}
-	// For simplicity, just use time.Now with an error threshold
-	tokenInfo := tokenResponse.toTokenInfo(time.Now())
+
+	// For simplicity, just use time.Now with a 3 second back-date
+	// Otherwise this requires parsing headers, the token itself, and requires the
+	// server times are 100% synced. This is less overhead and plenty accurate
+	tokenInfo := tokenResponse.toTokenInfo(time.Now().Add(time.Duration(-3)))
 
 	return tokenInfo, nil
+}
+
+// FetchToken fetches a valid token from keycloak.
+func (c *Client) FetchToken(realm string, username string, password string) (TokenInfo, error) {
+	bodyString := fmt.Sprintf("username=%s&password=%s&grant_type=password&client_id=admin-cli", username, password)
+	return c.doTokenRequest(realm, bodyString)
+}
+
+// RefreshToken fetches a valid token from keycloak using the refresh token.
+func (c *Client) RefreshToken(realm string, info TokenInfo) (TokenInfo, error) {
+	bodyString := fmt.Sprintf("refresh_token=%s&grant_type=refresh_token&client_id=admin-cli", info.RefreshToken)
+	return c.doTokenRequest(realm, bodyString)
 }
 
 // GetToken returns a valid token from the cache or from keycloak as needed.
