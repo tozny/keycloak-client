@@ -24,7 +24,7 @@ import (
 // A new token must be fetched.
 var ErrRefreshExhausted = errors.New("refresh token exhausted")
 
-// ErrSessionExpired indicates a login session has reached it's maximum allowed time, and a new session
+// ErrSessionExpired indicates a login session has reached its maximum allowed time, and a new session
 // is required to continue.
 var ErrSessionExpired = errors.New("auth session expired")
 
@@ -63,9 +63,8 @@ func (t *tokenJSON) toTokenInfo(iat time.Time) TokenInfo {
 		AccessToken:  t.AccessToken,
 		RefreshToken: t.RefreshToken,
 	}
-	// set up expires, backdating expires by 1 second
-	token.Expires = iat.Add(time.Duration(t.ExpiresIn-1) * time.Second)
-	token.RefreshExpires = iat.Add(time.Duration(t.RefreshExpiresIn-1) * time.Second)
+	token.Expires = iat.Add(time.Duration(t.ExpiresIn) * time.Second)
+	token.RefreshExpires = iat.Add(time.Duration(t.RefreshExpiresIn) * time.Second)
 	return token
 }
 
@@ -151,8 +150,10 @@ func (c *Client) FetchToken(realm string, username string, password string) (Tok
 			return TokenInfo{}, errors.Wrap(err, "could not unmarshal response")
 		}
 	}
-	// For simplicity, just use time.Now with an error threshold
-	tokenInfo := tokenResponse.toTokenInfo(time.Now())
+	// For simplicity, just use time.Now with a 3 second back-date
+	// Otherwise this requires parsing headers, the token itself, and requires the
+	// server times are 100% synced. This is less overhead and plenty accurate
+	tokenInfo := tokenResponse.toTokenInfo(time.Now().Add(time.Duration(-3)))
 
 	return tokenInfo, nil
 }
