@@ -209,13 +209,12 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 			// when a session has expired, or a token is exhausted, start a new session
 			if err == ErrRefreshExhausted || err == ErrSessionExpired {
 				info, err = c.FetchToken(realm, username, password)
-				// really, this should not occur, but just in case
-				if err != nil {
-					return "", err
-				}
-			} else {
+
+			}
+			// if we didn't start a new session, or it wasn't successful
+			if err != nil {
 				// Couldn't refresh the session due to an unexpected error
-				// clear the cache and restart report the error
+				// clear the cache, report the error
 				delete(c.tokens, key)
 				return "", err
 			}
