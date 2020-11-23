@@ -20,6 +20,14 @@ import (
 	jwt "github.com/gbrlsnchs/jwt/v2"
 )
 
+// ErrRefreshExhausted indicates a refresh token has been used too many times and is no longer valid.
+// A new token must be fetched.
+var ErrRefreshExhausted = errors.New("refresh token exhausted")
+
+// ErrSessionExpired indicates a login session has reached its maximum allowed time, and a new session
+// is required to continue.
+var ErrSessionExpired = errors.New("auth session expired")
+
 // Config is the keycloak client http config.
 type Config struct {
 	AddrTokenProvider string
@@ -27,11 +35,45 @@ type Config struct {
 	Timeout           time.Duration
 }
 
+// TokenInfo represents a full oAuth2 JWT token response with expiration and refresh
+type TokenInfo struct {
+	TokenType      string
+	AccessToken    string
+	Expires        time.Time
+	RefreshToken   string
+	RefreshExpires time.Time
+}
+
+// tokenJSON is the struct representing the HTTP response from OAuth2
+// providers returning a token in JSON form
+type tokenJSON struct {
+	TokenType        string `json:"token_type"`
+	AccessToken      string `json:"access_token"`
+	ExpiresIn        int32  `json:"expires_in"`
+	RefreshToken     string `json:"refresh_token"`
+	RefreshExpiresIn int32  `json:"refresh_expires_in"`
+}
+
+// toTokenInfo translates the expires information in a tokenJSON to a full token with
+// time.Time values. The issued at (iat) value must be when the token was issued
+// or expiration values will not calculate correctly
+func (t *tokenJSON) toTokenInfo(iat time.Time) TokenInfo {
+	token := TokenInfo{
+		TokenType:    t.TokenType,
+		AccessToken:  t.AccessToken,
+		RefreshToken: t.RefreshToken,
+	}
+	token.Expires = iat.Add(time.Duration(t.ExpiresIn) * time.Second)
+	token.RefreshExpires = iat.Add(time.Duration(t.RefreshExpiresIn) * time.Second)
+	return token
+}
+
 // Client is the keycloak client.
 type Client struct {
 	tokenProviderURL *url.URL
 	apiURL           *url.URL
 	httpClient       *gentleman.Client
+	tokens           map[string]TokenInfo
 }
 
 // HTTPError is returned when an error occured while contacting the keycloak instance.
@@ -74,11 +116,11 @@ func New(config Config) (*Client, error) {
 		tokenProviderURL: uToken,
 		apiURL:           uAPI,
 		httpClient:       httpClient,
+		tokens:           map[string]TokenInfo{},
 	}, nil
 }
 
-// getToken returns a valid token from keycloak.
-func (c *Client) GetToken(realm string, username string, password string) (string, error) {
+func (c *Client) doTokenRequest(realm, bodyString string) (TokenInfo, error) {
 	var req *gentleman.Request
 	{
 		var authPath = fmt.Sprintf("/auth/realms/%s/protocol/openid-connect/token", realm)
@@ -86,7 +128,7 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 		req = req.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 		req = req.Path(authPath)
 		req = req.Type("urlencoded")
-		req = req.BodyString(fmt.Sprintf("username=%s&password=%s&grant_type=password&client_id=admin-cli", username, password))
+		req = req.BodyString(bodyString)
 	}
 
 	var resp *gentleman.Response
@@ -94,30 +136,96 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 		var err error
 		resp, err = req.Do()
 		if err != nil {
-			return "", errors.Wrap(err, "could not get token")
+			return TokenInfo{}, errors.Wrap(err, "could not get token through refresh")
 		}
 	}
 	defer resp.Close()
+	// check the response code to make sure we were successful before parsing
+	if !resp.Ok {
+		var respErr map[string]string
+		err := resp.JSON(&respErr)
+		if err != nil {
+			return TokenInfo{}, errors.Wrap(err, "could not unmarshal error response")
+		}
+		// Map some known errors to defined error objects
+		switch respErr["error_description"] {
+		case "Maximum allowed refresh token reuse exceeded":
+			err = ErrRefreshExhausted
+		case "Session not active":
+			err = ErrSessionExpired
+		default:
+			err = errors.New(fmt.Sprintf("fetch error(%d): %s: %s", resp.StatusCode, respErr["error"], respErr["error_description"]))
+		}
+		return TokenInfo{}, err
+	}
 
-	var unmarshalledBody map[string]interface{}
+	var tokenResponse tokenJSON
 	{
 		var err error
-		err = resp.JSON(&unmarshalledBody)
+		err = resp.JSON(&tokenResponse)
 		if err != nil {
-			return "", errors.Wrap(err, "could not unmarshal response")
+			return TokenInfo{}, errors.Wrap(err, "could not unmarshal response")
 		}
 	}
 
-	var accessToken interface{}
-	{
-		var ok bool
-		accessToken, ok = unmarshalledBody["access_token"]
-		if !ok {
-			return "", fmt.Errorf("could not find access token in response body")
-		}
-	}
+	// For simplicity, just use time.Now with a 3 second back-date
+	// Otherwise this requires parsing headers, the token itself, and requires the
+	// server times are 100% synced. This is less overhead and plenty accurate
+	tokenInfo := tokenResponse.toTokenInfo(time.Now().Add(time.Duration(-3)))
 
-	return accessToken.(string), nil
+	return tokenInfo, nil
+}
+
+// FetchToken fetches a valid token from keycloak.
+func (c *Client) FetchToken(realm string, username string, password string) (TokenInfo, error) {
+	bodyString := fmt.Sprintf("username=%s&password=%s&grant_type=password&client_id=admin-cli", username, password)
+	return c.doTokenRequest(realm, bodyString)
+}
+
+// RefreshToken fetches a valid token from keycloak using the refresh token.
+func (c *Client) RefreshToken(realm string, info TokenInfo) (TokenInfo, error) {
+	bodyString := fmt.Sprintf("refresh_token=%s&grant_type=refresh_token&client_id=admin-cli", info.RefreshToken)
+	return c.doTokenRequest(realm, bodyString)
+}
+
+// GetToken returns a valid token from the cache or from keycloak as needed.
+func (c *Client) GetToken(realm string, username string, password string) (string, error) {
+	var err error
+	key := realm + username
+	info, ok := c.tokens[key]
+	if !ok || time.Now().After(info.RefreshExpires) {
+		// Token was not found, or no longer refreshable, start a new session
+		info, err = c.FetchToken(realm, username, password)
+		if err != nil {
+			delete(c.tokens, key)
+			return "", err
+		}
+		// Cache the token in memory
+		c.tokens[key] = info
+	} else if time.Now().After(info.Expires) {
+		// Token expired, refresh possible, attempt to use refresh
+		info, err = c.RefreshToken(realm, info)
+		if err != nil {
+			// when a session has expired, or a token is exhausted, start a new session
+			if err == ErrRefreshExhausted || err == ErrSessionExpired {
+				info, err = c.FetchToken(realm, username, password)
+
+			}
+			// if we didn't start a new session, or it wasn't successful
+			if err != nil {
+				// Couldn't refresh the session due to an unexpected error
+				// clear the cache, report the error
+				delete(c.tokens, key)
+				return "", err
+			}
+		}
+		// Update the cache with the new token info after refreshing
+		c.tokens[key] = info
+	}
+	// The token is available at this point, either from the cache, newly fetched
+	// or through a refresh flow. Return it in a way compatible with the former
+	// behavior of this method.
+	return info.AccessToken, err
 }
 
 // verifyToken token verify a token. It returns an error it is malformed, expired,...
