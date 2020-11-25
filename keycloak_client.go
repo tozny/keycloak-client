@@ -42,6 +42,7 @@ type TokenInfo struct {
 	Expires        time.Time
 	RefreshToken   string
 	RefreshExpires time.Time
+	refresher      *time.Timer
 }
 
 // tokenJSON is the struct representing the HTTP response from OAuth2
@@ -73,10 +74,10 @@ type Client struct {
 	tokenProviderURL *url.URL
 	apiURL           *url.URL
 	httpClient       *gentleman.Client
-	tokens           map[string]TokenInfo
+	tokens           map[string]*TokenInfo
 }
 
-// HTTPError is returned when an error occured while contacting the keycloak instance.
+// HTTPError is returned when an error occurred while contacting the keycloak instance.
 type HTTPError struct {
 	HTTPStatus int
 	Message    string
@@ -116,11 +117,11 @@ func New(config Config) (*Client, error) {
 		tokenProviderURL: uToken,
 		apiURL:           uAPI,
 		httpClient:       httpClient,
-		tokens:           map[string]TokenInfo{},
+		tokens:           map[string]*TokenInfo{},
 	}, nil
 }
 
-func (c *Client) doTokenRequest(realm, bodyString string) (TokenInfo, error) {
+func (c *Client) doTokenRequest(realm, bodyString string) (*TokenInfo, error) {
 	var req *gentleman.Request
 	{
 		var authPath = fmt.Sprintf("/auth/realms/%s/protocol/openid-connect/token", realm)
@@ -136,7 +137,7 @@ func (c *Client) doTokenRequest(realm, bodyString string) (TokenInfo, error) {
 		var err error
 		resp, err = req.Do()
 		if err != nil {
-			return TokenInfo{}, errors.Wrap(err, "could not get token through refresh")
+			return &TokenInfo{}, errors.Wrap(err, "could not get token through refresh")
 		}
 	}
 	defer resp.Close()
@@ -145,7 +146,7 @@ func (c *Client) doTokenRequest(realm, bodyString string) (TokenInfo, error) {
 		var respErr map[string]string
 		err := resp.JSON(&respErr)
 		if err != nil {
-			return TokenInfo{}, errors.Wrap(err, "could not unmarshal error response")
+			return &TokenInfo{}, errors.Wrap(err, "could not unmarshal error response")
 		}
 		// Map some known errors to defined error objects
 		switch respErr["error_description"] {
@@ -156,7 +157,7 @@ func (c *Client) doTokenRequest(realm, bodyString string) (TokenInfo, error) {
 		default:
 			err = errors.New(fmt.Sprintf("fetch error(%d): %s: %s", resp.StatusCode, respErr["error"], respErr["error_description"]))
 		}
-		return TokenInfo{}, err
+		return &TokenInfo{}, err
 	}
 
 	var tokenResponse tokenJSON
@@ -164,7 +165,7 @@ func (c *Client) doTokenRequest(realm, bodyString string) (TokenInfo, error) {
 		var err error
 		err = resp.JSON(&tokenResponse)
 		if err != nil {
-			return TokenInfo{}, errors.Wrap(err, "could not unmarshal response")
+			return &TokenInfo{}, errors.Wrap(err, "could not unmarshal response")
 		}
 	}
 
@@ -173,42 +174,42 @@ func (c *Client) doTokenRequest(realm, bodyString string) (TokenInfo, error) {
 	// server times are 100% synced. This is less overhead and plenty accurate
 	tokenInfo := tokenResponse.toTokenInfo(time.Now().Add(time.Duration(-3)))
 
-	return tokenInfo, nil
+	return &tokenInfo, nil
 }
 
 // FetchToken fetches a valid token from keycloak.
-func (c *Client) FetchToken(realm string, username string, password string) (TokenInfo, error) {
+func (c *Client) FetchToken(realm string, username string, password string) (*TokenInfo, error) {
 	bodyString := fmt.Sprintf("username=%s&password=%s&grant_type=password&client_id=admin-cli", username, password)
 	return c.doTokenRequest(realm, bodyString)
 }
 
 // RefreshToken fetches a valid token from keycloak using the refresh token.
-func (c *Client) RefreshToken(realm string, info TokenInfo) (TokenInfo, error) {
+func (c *Client) RefreshToken(realm string, info *TokenInfo) (*TokenInfo, error) {
 	bodyString := fmt.Sprintf("refresh_token=%s&grant_type=refresh_token&client_id=admin-cli", info.RefreshToken)
 	return c.doTokenRequest(realm, bodyString)
 }
 
-// GetToken returns a valid token from the cache or from keycloak as needed.
-func (c *Client) GetToken(realm string, username string, password string) (string, error) {
+// GetTokenInfo fetches a set of token info, from the cache, or from the server, refreshing as necessary
+// by either starting a new session, or utilizing the refresh token to extend the current session
+func (c *Client) GetTokenInfo(realm string, username string, password string, force bool) (*TokenInfo, error) {
 	var err error
+	var newInfo *TokenInfo
 	key := realm + username
 	info, ok := c.tokens[key]
 	if !ok || time.Now().After(info.RefreshExpires) {
 		// Token was not found, or no longer refreshable, start a new session
-		info, err = c.FetchToken(realm, username, password)
+		newInfo, err = c.FetchToken(realm, username, password)
 		if err != nil {
 			delete(c.tokens, key)
-			return "", err
+			return &TokenInfo{}, err
 		}
-		// Cache the token in memory
-		c.tokens[key] = info
-	} else if time.Now().After(info.Expires) {
+	} else if force || time.Now().After(info.Expires) {
 		// Token expired, refresh possible, attempt to use refresh
-		info, err = c.RefreshToken(realm, info)
+		newInfo, err = c.RefreshToken(realm, info)
 		if err != nil {
 			// when a session has expired, or a token is exhausted, start a new session
 			if err == ErrRefreshExhausted || err == ErrSessionExpired {
-				info, err = c.FetchToken(realm, username, password)
+				newInfo, err = c.FetchToken(realm, username, password)
 
 			}
 			// if we didn't start a new session, or it wasn't successful
@@ -216,16 +217,71 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 				// Couldn't refresh the session due to an unexpected error
 				// clear the cache, report the error
 				delete(c.tokens, key)
-				return "", err
+				return &TokenInfo{}, err
 			}
 		}
-		// Update the cache with the new token info after refreshing
-		c.tokens[key] = info
+	}
+	// If new info was fetched, clean up and reset state
+	if newInfo != nil {
+		// if we have old info, and that info has a refresher...
+		if ok && info.refresher != nil {
+			// Make sure to tell the old refresher to stop so it can get garbage collected
+			// even if it doesn't correctly fire for some reason.
+			info.refresher.Stop()
+		}
+		// update the cache and local info with the new info
+		c.tokens[key] = newInfo
+		info = newInfo
 	}
 	// The token is available at this point, either from the cache, newly fetched
-	// or through a refresh flow. Return it in a way compatible with the former
-	// behavior of this method.
+	// or through a refresh flow
+	return info, err
+}
+
+// GetToken returns a valid token from the cache or from keycloak as needed.
+func (c *Client) GetToken(realm string, username string, password string) (string, error) {
+	info, err := c.GetTokenInfo(realm, username, password, false)
+	if err != nil {
+		return "", err
+	}
+	// Return it in a way compatible with the former behavior of this method.
 	return info.AccessToken, err
+}
+
+// AutoRefreshToken starts a process where an access token is kept perpetually
+// warm in the cache, refreshing itself five seconds before it is needed.
+func (c *Client) AutoRefreshToken(realm string, username string, password string, onFailure func(error)) {
+	info, err := c.GetTokenInfo(realm, username, password, true)
+	if err != nil {
+		// Unable to fetch teh token, allow userland to determine the correct
+		// behavior here -- retry, panic, log, etc...
+		onFailure(err)
+		return
+	}
+	// Refresh 5 seconds before the auth token expires
+	nextRefresh := info.Expires.Sub(time.Now().Add(5 * time.Second))
+	// Pass in arguments to allow original args to get garbage collected.
+	info.refresher = time.AfterFunc(nextRefresh, func(realm, username, password string, onFailure func(error), c *Client) func() {
+		// send back a function which will re-call this method after the timeout
+		// capturing the arguments in a closure.
+		return func() {
+			c.AutoRefreshToken(realm, username, password, onFailure)
+		}
+	}(realm, username, password, onFailure, c))
+}
+
+// CancelAutoRefreshToken turns off the auto-refresh loop for a token. It will
+// still get cached on use, but the cache is not guaranteed to be warm.
+func (c *Client) CancelAutoRefreshToken(realm string, username string) {
+	key := realm + username
+	info, ok := c.tokens[key]
+	if !ok {
+		return
+	}
+	if info.refresher == nil {
+		return
+	}
+	info.refresher.Stop()
 }
 
 // verifyToken token verify a token. It returns an error it is malformed, expired,...
