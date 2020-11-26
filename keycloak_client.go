@@ -249,11 +249,11 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 }
 
 // AutoRefreshToken starts a process where an access token is kept perpetually
-// warm in the cache, refreshing itself five seconds before it is needed.
+// warm in the cache, refreshing itself five seconds before it expires.
 func (c *Client) AutoRefreshToken(realm string, username string, password string, onFailure func(error)) {
 	info, err := c.GetTokenInfo(realm, username, password, true)
 	if err != nil {
-		// Unable to fetch teh token, allow userland to determine the correct
+		// Unable to fetch the token, allow userland to determine the correct
 		// behavior here -- retry, panic, log, etc...
 		onFailure(err)
 		return

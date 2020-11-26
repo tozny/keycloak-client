@@ -18,9 +18,9 @@ When starting automatic refresh, provide a method to handle errors when the refr
 error and move on, etc. Whatever makes sense for the application using the client.
 
 ```go
-realm := example
-username := admin
-password := secret
+realm := "example"
+username := "admin"
+password := "secret"
 func onFailure(err error) {
 	log.Printf("Unable to auto refresh token: %v. Retrying...", err)
 	// Retry after 30 seconds
