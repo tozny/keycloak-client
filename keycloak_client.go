@@ -121,6 +121,11 @@ func New(config Config) (*Client, error) {
 	}, nil
 }
 
+// LogRequests sets up a client plugin to log requests
+func (c *Client) LogRequests(logger RequestLogger) {
+	c.httpClient = c.httpClient.Use(loggerPlugin(logger))
+}
+
 func (c *Client) doTokenRequest(realm, bodyString string) (*TokenInfo, error) {
 	var req *gentleman.Request
 	{
