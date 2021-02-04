@@ -11,6 +11,7 @@ const (
 	protocolMapperByIDPath                   = protocolMappersPath + "/:id"
 	UserSessionNoteOIDCApplicationMapperType = "oidc-usersessionmodel-note-mapper"
 	UserAttributeOIDCApplicationMapperType   = "oidc-usermodel-attribute-mapper"
+	GroupMembershipOIDCApplicationMapperType = "oidc-group-membership-mapper"
 	RoleListSAMLApplicationMapperType        = "saml-role-list-mapper"
 	UserPropertySAMLApplicationMapperType    = "saml-user-property-mapper"
 )

@@ -14,6 +14,7 @@ const (
 	userCountPath                = userPath + "/count"
 	userIDPath                   = userPath + "/:id"
 	userGroupsPath               = userIDPath + "/groups"
+	userGroupPath                = userGroupsPath + "/:group_id"
 	resetPasswordPath            = userIDPath + "/reset-password"
 	sendVerifyEmailPath          = userIDPath + "/send-verify-email"
 	executeActionsEmailPath      = userIDPath + "/execute-actions-email"
@@ -72,6 +73,16 @@ func (c *Client) GetGroupsOfUser(accessToken string, realmName, userID string) (
 	var resp = []GroupRepresentation{}
 	var err = c.get(accessToken, &resp, url.Path(userGroupsPath), url.Param("realm", realmName), url.Param("id", userID))
 	return resp, err
+}
+
+// JoinGroup adds a user to a group by ID.
+func (c *Client) JoinGroup(accessToken string, realmName, userID, groupID string) error {
+	return c.put(accessToken, url.Path(userGroupPath), url.Param("realm", realmName), url.Param("id", userID), url.Param("group_id", groupID))
+}
+
+// LeaveGroup removes a user from a group by ID.
+func (c *Client) LeaveGroup(accessToken string, realmName, userID, groupID string) error {
+	return c.delete(accessToken, url.Path(userGroupPath), url.Param("realm", realmName), url.Param("id", userID), url.Param("group_id", groupID))
 }
 
 // UpdateUser updates the user.
