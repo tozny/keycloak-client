@@ -308,6 +308,49 @@ func (c *Client) VerifyToken(realmName string, accessToken string) error {
 	return err
 }
 
+// doRequest makes an HTTP request with standard plugins and status/error handling
+func (c *Client) doRequest(req *gentleman.Request, plugins ...plugin.Plugin) (*gentleman.Response, error) {
+	var err error
+	var resp *gentleman.Response
+
+	req = applyPlugins(req, plugins...)
+
+	if err != nil {
+		return resp, err
+	}
+
+	resp, err = req.Do()
+	if err != nil {
+		return resp, errors.Wrap(err, "could not get response")
+	}
+
+	switch {
+	case resp.StatusCode == http.StatusUnauthorized:
+		return resp, HTTPError{
+			HTTPStatus: resp.StatusCode,
+			Message:    string(resp.Bytes()),
+		}
+	case resp.StatusCode >= 400:
+		var response map[string]string
+		err := json.Unmarshal(resp.Bytes(), &response)
+		if message, ok := response["errorMessage"]; ok && err == nil {
+			return resp, HTTPError{
+				HTTPStatus: resp.StatusCode,
+				Message:    message,
+			}
+		}
+		return resp, HTTPError{
+			HTTPStatus: resp.StatusCode,
+			Message:    string(resp.Bytes()),
+		}
+	case resp.StatusCode >= 200:
+		break
+	default:
+		return resp, fmt.Errorf("unknown response status code: %v", resp.StatusCode)
+	}
+	return resp, err
+}
+
 // get is a HTTP get method.
 func (c *Client) get(accessToken string, data interface{}, plugins ...plugin.Plugin) error {
 	var err error
