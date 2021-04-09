@@ -2,11 +2,13 @@ package keycloak
 
 import (
 	"gopkg.in/h2non/gentleman.v2/plugins/body"
+	"gopkg.in/h2non/gentleman.v2/plugins/headers"
 	"gopkg.in/h2non/gentleman.v2/plugins/url"
 )
 
 const (
 	authenticationManagementPath = "/auth/admin/realms/:realm/authentication"
+	logoutPath                   = "/auth/realms/:realm/admin/logout"
 )
 
 // GetAuthenticatorProviders returns a list of authenticator providers.
@@ -191,4 +193,10 @@ func (c *Client) GetUnregisteredRequiredActions(accessToken string, realmName st
 	var resp = []map[string]interface{}{}
 	var err = c.get(accessToken, &resp, url.Path(authenticationManagementPath+"/unregistered-required-actions"), url.Param("realm", realmName))
 	return resp, err
+}
+
+// ExpireSession clears a session based on a valid session token
+func (c *Client) ExpireSession(accessToken, realmName, sessionToken string) error {
+	_, err := c.post(accessToken, nil, url.Path(logoutPath), url.Param("realm", realmName), headers.Set("X-Tozny-Session", sessionToken))
+	return err
 }
