@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
@@ -27,6 +28,9 @@ var ErrRefreshExhausted = errors.New("refresh token exhausted")
 // ErrSessionExpired indicates a login session has reached its maximum allowed time, and a new session
 // is required to continue.
 var ErrSessionExpired = errors.New("auth session expired")
+
+// KeycloakTokenInfoLock allows for access control so only one routine is able to access the Keycloak Token Info
+var KeycloakTokenInfoLock = &sync.Mutex{}
 
 // Config is the keycloak client http config.
 type Config struct {
@@ -200,7 +204,10 @@ func (c *Client) GetTokenInfo(realm string, username string, password string, fo
 	var err error
 	var newInfo *TokenInfo
 	key := realm + username
+	KeycloakTokenInfoLock.Lock()
+	// Required exclusive access
 	info, ok := c.tokens[key]
+	KeycloakTokenInfoLock.Unlock()
 	if !ok || time.Now().After(info.RefreshExpires) {
 		// Token was not found, or no longer refreshable, start a new session
 		newInfo, err = c.FetchToken(realm, username, password)
