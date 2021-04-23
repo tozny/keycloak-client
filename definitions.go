@@ -472,8 +472,8 @@ type RealmRepresentation struct {
 	ScopeMappings                       *[]ScopeMappingRepresentation           `json:"scopeMappings,omitempty"`
 	SmtpServer                          *map[string]interface{}                 `json:"smtpServer,omitempty"`
 	SslRequired                         *string                                 `json:"sslRequired,omitempty"`
-	SsoSessionIdleTimeout               *int32                                  `json:"ssoSessionIdleTimeout,omitempty"`
-	SsoSessionMaxLifespan               *int32                                  `json:"ssoSessionMaxLifespan,omitempty"`
+	SSOSessionIdleTimeout               *int32                                  `json:"ssoSessionIdleTimeout,omitempty"`
+	SSOSessionMaxLifespan               *int32                                  `json:"ssoSessionMaxLifespan,omitempty"`
 	SupportedLocales                    *[]string                               `json:"supportedLocales,omitempty"`
 	Users                               *[]UserRepresentation                   `json:"users,omitempty"`
 	VerifyEmail                         *bool                                   `json:"verifyEmail,omitempty"`
@@ -694,4 +694,18 @@ type ClientScopeRepresentation struct {
 	Protocol        *string                         `json:"protocol,omitempty"`
 	ProtocolMappers *[]ProtocolMapperRepresentation `json:"protocolMappers,omitempty"`
 	Attributes      *map[string][]string            `json:"attributes,omitempty"`
+}
+
+type InitiatePKCELogin struct {
+	Nonce         string `schema:"nonce"`
+	ClientID      string `schema:"client_id"`
+	ResponseType  string `schema:"response_type"`
+	Scope         string `schema:"scope"`
+	RedirectURI   string `schema:"redirect_uri"`
+	ResponseMode  string `schema:"response_mode"`
+	State         string `schema:"state"`
+	Username      string `schema:"username"`
+	Target        string `schema:"target"`
+	AuthSessionID string `schema:"auth_session_id"`
+	CodeChallenge string `schema:"code_challenge"`
 }
