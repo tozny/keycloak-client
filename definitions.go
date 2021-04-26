@@ -697,15 +697,16 @@ type ClientScopeRepresentation struct {
 }
 
 type InitiatePKCELogin struct {
-	Nonce         string `schema:"nonce"`
-	ClientID      string `schema:"client_id"`
-	ResponseType  string `schema:"response_type"`
-	Scope         string `schema:"scope"`
-	RedirectURI   string `schema:"redirect_uri"`
-	ResponseMode  string `schema:"response_mode"`
-	State         string `schema:"state"`
-	Username      string `schema:"username"`
-	Target        string `schema:"target"`
-	AuthSessionID string `schema:"auth_session_id"`
-	CodeChallenge string `schema:"code_challenge"`
+	Nonce               string `schema:"nonce"`
+	ClientID            string `schema:"client_id"`
+	ResponseType        string `schema:"response_type"`
+	Scope               string `schema:"scope"`
+	RedirectURI         string `schema:"redirect_uri"`
+	ResponseMode        string `schema:"response_mode"`
+	State               string `schema:"state"`
+	Username            string `schema:"username"`
+	Target              string `schema:"target"`
+	AuthSessionID       string `schema:"auth_session_id"`
+	CodeChallenge       string `schema:"code_challenge"`
+	CodeChallengeMethod string `schema:"code_challenge_method"`
 }
